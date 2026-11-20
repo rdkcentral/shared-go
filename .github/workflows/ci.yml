@@ -249,7 +249,7 @@ on:
         required: false
         type: boolean
         default: false
-      tests-coverage-threshold:
+      coverage-threshold:
         description: |
           The minimum total test coverage percentage (0-100) required.  The
           unit tests fail if coverage is lower.  Set to 0 to report coverage
@@ -397,7 +397,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         shell: bash
         env:
-          THRESHOLD: ${{ inputs.tests-coverage-threshold }}
+          THRESHOLD: ${{ inputs.coverage-threshold }}
           WORKDIR:   ${{ inputs.working-directory }}
         run: |
           # coverage.txt lines: <file>:<start>,<end> <statements> <count>
@@ -472,7 +472,7 @@ jobs:
         with:
           profile:         ${{ inputs.working-directory }}/coverage.txt
           source-dir:      ${{ inputs.working-directory }}
-          threshold-total: ${{ inputs.tests-coverage-threshold }}
+          threshold-total: ${{ inputs.coverage-threshold }}
 
 
   # Optional: post the coverage report on the pull request.  Callers must

@@ -191,7 +191,7 @@ workflow can't be given more than its caller allows.
 | `style-skip` |  | boolean | `False` | Skip building the gofmt check. |
 | `tests-race` |  | boolean | `True` | If set to "true" (default), race condition checking will be performed during unit tests. Otherwise no race condition checking will be done. |
 | `tests-skip` |  | boolean | `False` | Skip running the unit tests. |
-| `tests-coverage-threshold` |  | number | `80` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. |
+| `coverage-threshold` |  | number | `80` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. |
 | `coverage-comment` |  | boolean | `true` | If set to true (default), post (and keep updated) a coverage report comment on the pull request. Comments are never posted for pull requests from forks or from dependabot, because their token is read-only. |
 | `upload-skip` |  | boolean | `False` | Skip uploading the artifacts. |
 | `yaml-lint-skip` |  | boolean | `True` | Skip linting yaml files. |
@@ -202,7 +202,7 @@ Coverage is checked with [go-test-coverage](https://github.com/vladopajic/go-tes
 which needs no token.  Results show up in these places:
 
 - **The check on the PR.**  The unit tests fail when total coverage is below
-  `tests-coverage-threshold` (default 80).  Set it to `0` to only report.
+  `coverage-threshold` (default 80).  Set it to `0` to only report.
 - **The job summary and an annotation.**  Always produced: total coverage, the
   pass/fail result, and a per-package table (lowest first).
 - **A PR comment (on by default).**  Set `coverage-comment: false` to
