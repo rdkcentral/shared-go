@@ -199,11 +199,23 @@ on:
     - cron: '0 12 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions:  write   # lets the release job dispatch your CI workflow
+
 jobs:
   release:
     uses: xmidt-org/shared-go/.github/workflows/auto-releaser.yml@<commit-sha> # vX.Y.Z
+    with:
+      release-workflow: ci.yml   # your CI workflow; it needs a workflow_dispatch trigger
     secrets: inherit
 ```
+
+Tags created with `github.token` don't trigger other workflows, so after
+tagging the auto-releaser dispatches `release-workflow` on the new tag.  The
+dispatched run executes your CI workflow as it exists at that tag, so its
+`with:` settings are not repeated.  If `release-workflow` is empty the job
+fails before creating a tag, rather than leaving an unreleased one.
 
 #### Inputs
 
@@ -214,6 +226,7 @@ jobs:
 | `minor-list` |  | string | `feat, Feat, FEAT, feature, Feature, FEATURE` | The specific minor prefix names to use for minors. |
 | `tag-filter` |  | string | `^.+$` | A string to filter tags by. By default allows all tags. This is useful if you want to only consider tags that match a certain pattern for the next version calculation. Primarily this is used to ignore older tags in the shared-go repo that are used for testing the release process. This is mapped directly into the ietf-tools/semver-action 'tagFilter' input. |
 | `which` |  | string | `tag` | Create a 'release' or 'tag'. |
+| `release-workflow` |  | string |  | File name of the caller's CI workflow (e.g. `ci.yml`). It must have a `workflow_dispatch` trigger. A tag created with the default GITHUB_TOKEN does not trigger other workflows, so after tagging this workflow is dispatched on the new tag to run the release. Required when `which` is `tag`. |
 | `release-ignore-paths` |  | string | `.github/** **/*.md LICENSE LICENSES/** .reuse/** .gitignore .gitattributes` | Newline-separated list of glob patterns. If every file changed since the last matched tag falls within these patterns, the auto-release is skipped — preventing patch bumps from chore(deps) or docs/CI commits that didn't touch shippable code. Pass an empty string to disable the check. |
 
 ### Dependabot Approver (`approve-dependabot.yml`)
@@ -248,13 +261,12 @@ Callers pass them with `secrets: inherit`.
 
 | Secret | Used by | Required | Why `github.token` isn't enough |
 | :--- | :--- | :---: | :--- |
-| `PUSH_TAG_TOKEN` | `auto-releaser.yml`, `tests.yml` | auto-releaser: optional; tests: testing only | Tags pushed with `github.token` don't trigger other workflows, so the release workflow (or the tag-based release test jobs) would never run. `auto-releaser.yml` falls back to `github.token`: the tag is created, but no release is triggered. Needs `contents: write`. |
 | `CODECOV_TOKEN` | `ci.yml` (`unit_test`) | if uploading coverage | Authenticates uploads to codecov.io. |
 | `RPM_GPG_PRIVATE_KEY` | `ci.yml` (`release`) | if `release-rpms` or `release-debs` | Private key used to sign RPM/DEB packages. |
 | `RPM_GPG_PRIVATE_PASSWORD` | `ci.yml` (`release`) | if `release-rpms` or `release-debs` | Passphrase for the signing key. |
 
-The dependabot approver (`approve-dependabot.yml`) and tag-cleanup
-(`cleanup-tags.yml`) workflows need no secrets.
+Tagging, the dependabot approver, tag cleanup and `tests.yml` all use
+`github.token`.
 
 ### Variables
 
@@ -275,7 +287,6 @@ the `GITHUB_TOKEN` is read-only on `pull_request`.  Variables are not affected.
 | Secret | Needed for dependabot PRs? | Notes |
 | :--- | :---: | :--- |
 | `CODECOV_TOKEN` | yes | `unit_test` runs on every PR.  Add it as a Dependabot secret or coverage uploads fail or are skipped. |
-| `PUSH_TAG_TOKEN` | this repo only | `tests.yml` runs on every PR and pushes a test tag.  Downstream repos don't use it on PRs. |
 | `RPM_GPG_PRIVATE_KEY`, `RPM_GPG_PRIVATE_PASSWORD` | no | `release` only runs on version tags. |
 
 The auto-merge itself needs no secrets: `approve-dependabot.yml` runs on
@@ -301,7 +312,8 @@ not actually uploaded.  To verify the release is what you expect, comment out
 the `--skip-publish` options and trigger a PR.
 
 Test tags (`v1.0.x`) are created by `tests.yml` and removed weekly by
-`cleanup-tags.yml`.
+`cleanup-tags.yml`.  Dependabot PRs skip the test tag because their token is
+read-only.
 
 Generally create a PR to test a change.
 
