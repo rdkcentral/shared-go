@@ -141,7 +141,7 @@ permissions:
 
 jobs:
   ci:
-    uses: xmidt-org/shared-go/.github/workflows/ci.yml@<commit-sha> # vX.Y.Z
+    uses: rdkcentral/shared-go/.github/workflows/ci.yml@<commit-sha> # vX.Y.Z
     with:
       release-type: program    # or: library
     secrets: inherit
@@ -237,7 +237,7 @@ permissions:
 
 jobs:
   release:
-    uses: xmidt-org/shared-go/.github/workflows/auto-releaser.yml@<commit-sha> # vX.Y.Z
+    uses: rdkcentral/shared-go/.github/workflows/auto-releaser.yml@<commit-sha> # vX.Y.Z
     with:
       release-workflow: ci.yml   # your CI workflow; it needs a workflow_dispatch trigger
     secrets: inherit
@@ -278,7 +278,7 @@ permissions:
 
 jobs:
   dependabot:
-    uses: xmidt-org/shared-go/.github/workflows/approve-dependabot.yml@<commit-sha> # vX.Y.Z
+    uses: rdkcentral/shared-go/.github/workflows/approve-dependabot.yml@<commit-sha> # vX.Y.Z
 ```
 
 The repo must have *Allow auto-merge* enabled.  No secrets are needed.
