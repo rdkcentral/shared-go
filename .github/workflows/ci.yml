@@ -397,6 +397,7 @@ jobs:
         shell: bash
         env:
           THRESHOLD: ${{ inputs.tests-coverage-threshold }}
+          WORKDIR:   ${{ inputs.working-directory }}
         run: |
           # coverage.txt lines: <file>:<start>,<end> <statements> <count>
           awk -v threshold="$THRESHOLD" '
@@ -428,9 +429,14 @@ jobs:
             minimum="minimum ${THRESHOLD}%"
           fi
 
+          # The marker is per working directory so each module in a repo gets
+          # its own (updated, not duplicated) PR comment.
+          where=""
+          if [ "$WORKDIR" != "." ]; then where=" for \`${WORKDIR}\`"; fi
+
           {
-            echo "<!-- shared-go-coverage -->"
-            echo "### ${icon} Test coverage: ${total}% (${minimum})"
+            echo "<!-- shared-go-coverage:${WORKDIR} -->"
+            echo "### ${icon} Test coverage${where}: ${total}% (${minimum})"
             echo
             echo "<details><summary>Coverage by package (lowest first)</summary>"
             echo
@@ -490,10 +496,11 @@ jobs:
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          REPORT: ${{ needs.unit_test.outputs.coverage_report }}
+          REPORT:  ${{ needs.unit_test.outputs.coverage_report }}
+          WORKDIR: ${{ inputs.working-directory }}
         with:
           script: |
-            const marker = '<!-- shared-go-coverage -->';
+            const marker = `<!-- shared-go-coverage:${process.env.WORKDIR} -->`;
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.paginate(
