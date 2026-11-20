@@ -154,7 +154,7 @@ jobs:
       release-project-name: program
       release-skip-publish: --skip-publish
       upload-skip:          true
-      tests-coverage-comment: false
+      coverage-comment: false
       yaml-lint-skip:       false
     secrets: inherit
 
@@ -168,7 +168,7 @@ jobs:
       release-project-name: library
       release-skip-publish: --skip-publish
       upload-skip:          true
-      tests-coverage-comment: false
+      coverage-comment: false
     secrets: inherit
 
   tag:
