@@ -259,12 +259,13 @@ on:
         default: 80
       tests-coverage-comment:
         description: |
-          If set to true, post (and keep updated) a coverage report comment on
-          the pull request.  Comments are never posted for pull requests from
-          forks or from dependabot, because their token is read-only.
+          If set to true (default), post (and keep updated) a coverage report
+          comment on the pull request.  Comments are never posted for pull
+          requests from forks or from dependabot, because their token is
+          read-only.
         required: false
         type: boolean
-        default: false
+        default: true
 
       # Artifact uploading focused
       upload-skip:

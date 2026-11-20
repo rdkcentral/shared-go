@@ -44,7 +44,6 @@ jobs:
       release-docker:       true
       release-docker-file:  ./cmd/foo/Dockerfile
       upload-skip:          true
-      tests-coverage-comment: true
     secrets: inherit
 
   command-tag:
@@ -85,7 +84,6 @@ jobs:
       release-docker-extras: |
         main.go
       upload-skip:          true
-      tests-coverage-comment: true
     secrets: inherit
 
   program-tag:
@@ -125,7 +123,6 @@ jobs:
       release-type:         library
       release-project-name: library
       upload-skip:          true
-      tests-coverage-comment: true
     secrets: inherit
 
   library-tag:
@@ -157,6 +154,7 @@ jobs:
       release-project-name: program
       release-skip-publish: --skip-publish
       upload-skip:          true
+      tests-coverage-comment: false
       yaml-lint-skip:       false
     secrets: inherit
 
@@ -170,6 +168,7 @@ jobs:
       release-project-name: library
       release-skip-publish: --skip-publish
       upload-skip:          true
+      tests-coverage-comment: false
     secrets: inherit
 
   tag:
