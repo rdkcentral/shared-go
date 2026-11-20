@@ -103,7 +103,7 @@ This workflow does the following things automatically:
 - runs golangci-lint checking (may be disabled)
 - checks the copyright headers (may be disabled)
 - dependency license checking (may be disabled)
-- uploads coverage to codecov (needs `CODECOV_TOKEN`)
+- reports test coverage and optionally enforces a minimum ([go-test-coverage](https://github.com/vladopajic/go-test-coverage))
 - releasing via [goreleaser](https://goreleaser.com) (may be disabled)
 
 ## Reusable Workflows
@@ -134,6 +134,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents:      write
+  packages:      write
+  pull-requests: write   # used by the optional coverage PR comment
+
 jobs:
   ci:
     uses: xmidt-org/shared-go/.github/workflows/ci.yml@<commit-sha> # vX.Y.Z
@@ -141,6 +146,9 @@ jobs:
       release-type: program    # or: library
     secrets: inherit
 ```
+
+The workflow file must grant at least the permissions shown, because a reusable
+workflow can't be given more than its caller allows.
 
 #### Inputs
 
@@ -183,8 +191,40 @@ jobs:
 | `style-skip` |  | boolean | `False` | Skip building the gofmt check. |
 | `tests-race` |  | boolean | `True` | If set to "true" (default), race condition checking will be performed during unit tests. Otherwise no race condition checking will be done. |
 | `tests-skip` |  | boolean | `False` | Skip running the unit tests. |
+| `tests-coverage-threshold` |  | number | `80` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. |
+| `tests-coverage-comment` |  | boolean | `false` | If set to true, post (and keep updated) a coverage report comment on the pull request. Comments are never posted for pull requests from forks or from dependabot, because their token is read-only. |
 | `upload-skip` |  | boolean | `False` | Skip uploading the artifacts. |
 | `yaml-lint-skip` |  | boolean | `True` | Skip linting yaml files. |
+
+#### Test coverage
+
+Coverage is checked with [go-test-coverage](https://github.com/vladopajic/go-test-coverage),
+which needs no token.  Results show up in these places:
+
+- **The check on the PR.**  The unit tests fail when total coverage is below
+  `tests-coverage-threshold` (default 80).  Set it to `0` to only report.
+- **The job summary and an annotation.**  Always produced: total coverage, the
+  pass/fail result, and a per-package table (lowest first).
+- **A PR comment (opt-in).**  Set `tests-coverage-comment: true`.  The caller
+  must grant `pull-requests: write` (as in the example above) whether or not
+  the comment is enabled:
+
+  ```yaml
+  jobs:
+    ci:
+      uses: xmidt-org/shared-go/.github/workflows/ci.yml@<commit-sha> # vX.Y.Z
+      with:
+        release-type: program
+        tests-coverage-comment: true
+      secrets: inherit
+  ```
+
+  One comment is posted and then updated on each push, passing or failing.
+  It is skipped for dependabot and fork PRs, and if posting fails the
+  job and the rest of the workflow still pass.
+
+Per-file and per-package minimums can be set in a `.testcoverage.yml` file; see
+the go-test-coverage documentation.
 
 ### Auto Releaser (`auto-releaser.yml`)
 
@@ -261,7 +301,6 @@ Callers pass them with `secrets: inherit`.
 
 | Secret | Used by | Required | Why `github.token` isn't enough |
 | :--- | :--- | :---: | :--- |
-| `CODECOV_TOKEN` | `ci.yml` (`unit_test`) | if uploading coverage | Authenticates uploads to codecov.io. |
 | `RPM_GPG_PRIVATE_KEY` | `ci.yml` (`release`) | if `release-rpms` or `release-debs` | Private key used to sign RPM/DEB packages. |
 | `RPM_GPG_PRIVATE_PASSWORD` | `ci.yml` (`release`) | if `release-rpms` or `release-debs` | Passphrase for the signing key. |
 
@@ -286,7 +325,6 @@ the `GITHUB_TOKEN` is read-only on `pull_request`.  Variables are not affected.
 
 | Secret | Needed for dependabot PRs? | Notes |
 | :--- | :---: | :--- |
-| `CODECOV_TOKEN` | yes | `unit_test` runs on every PR.  Add it as a Dependabot secret or coverage uploads fail or are skipped. |
 | `RPM_GPG_PRIVATE_KEY`, `RPM_GPG_PRIVATE_PASSWORD` | no | `release` only runs on version tags. |
 
 The auto-merge itself needs no secrets: `approve-dependabot.yml` runs on
