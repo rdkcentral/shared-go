@@ -249,7 +249,7 @@ on:
         required: false
         type: boolean
         default: false
-      coverage-threshold:
+      tests-min-threshold:
         description: |
           The minimum total test coverage percentage (0-100) required.  The
           unit tests fail if coverage is lower.  Set to 0 to report coverage
@@ -257,7 +257,7 @@ on:
         required: false
         type: number
         default: 80
-      coverage-comment:
+      tests-post-comment:
         description: |
           If set to true (default), post (and keep updated) a coverage report
           comment on the pull request.  Comments are never posted for pull
@@ -397,7 +397,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         shell: bash
         env:
-          THRESHOLD: ${{ inputs.coverage-threshold }}
+          THRESHOLD: ${{ inputs.tests-min-threshold }}
           WORKDIR:   ${{ inputs.working-directory }}
         run: |
           # coverage.txt lines: <file>:<start>,<end> <statements> <count>
@@ -472,12 +472,12 @@ jobs:
         with:
           profile:         ${{ inputs.working-directory }}/coverage.txt
           source-dir:      ${{ inputs.working-directory }}
-          threshold-total: ${{ inputs.coverage-threshold }}
+          threshold-total: ${{ inputs.tests-min-threshold }}
 
 
   # Optional: post the coverage report on the pull request.  Callers must
   # grant `pull-requests: write` to this workflow (even when they don't enable
-  # coverage-comment) because a reusable workflow can't request more
+  # tests-post-comment) because a reusable workflow can't request more
   # permission than its caller allows.
   coverage_comment:
     name: Coverage PR comment
@@ -487,7 +487,7 @@ jobs:
       pull-requests: write
     if: |
       always() &&
-      inputs.coverage-comment &&
+      inputs.tests-post-comment &&
       needs.unit_test.outputs.coverage_report != '' &&
       github.event_name == 'pull_request' &&
       github.actor != 'dependabot[bot]' &&
