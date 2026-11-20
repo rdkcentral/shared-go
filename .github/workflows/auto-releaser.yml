@@ -1,20 +1,5 @@
 # SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 # SPDX-License-Identifier: Apache-2.0
-# @example=## Golang Automatic Patch Releaser Sample
-## SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
-## SPDX-License-Identifier: Apache-2.0
-#---
-#name: 'Automatically relase patch versions.'
-#
-#  on:
-#    schedule: # Run every day at 12:00 UTC
-#      - cron: '0 12 * * *'
-#    workflow_dispatch:
-#
-#  jobs:
-#    release:
-#      uses: xmidt-org/shared-go/.github/workflows/ci.yml@826aa545bb56f6c7c551d44febb420c0293c8bff # v4.2.0
-#      secrets: inherit
 ---
 name: 'Auto Releaser'
 
@@ -86,7 +71,7 @@ on:
           .gitattributes
 
     secrets:
-      PERSONAL_ACCESS_TOKEN:
+      PUSH_TAG_TOKEN:
         description: |
           A GitHub Personal Access Token with repo permissions, used to create
           the release tag. Optional. Provide it when additional workflows need
@@ -170,7 +155,7 @@ jobs:
           inputs.which == 'tag'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN || github.token }}
+          github-token: ${{ secrets.PUSH_TAG_TOKEN || github.token }}
           script: |
             github.rest.git.createRef({
               owner: context.repo.owner,
