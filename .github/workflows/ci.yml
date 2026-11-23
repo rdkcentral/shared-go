@@ -1131,6 +1131,7 @@ jobs:
 
       - name: Handle the RPM signing keys
         if: |
+          inputs.release-simulate-tag == '' &&
           inputs.release-type == 'program' &&
           inputs.release-rpms == true
         working-directory: ${{ inputs.working-directory }}
@@ -1144,6 +1145,7 @@ jobs:
 
       - name: Handle the DEB signing keys
         if: |
+          inputs.release-simulate-tag == '' &&
           inputs.release-type == 'program' &&
           inputs.release-debs == true
         working-directory: ${{ inputs.working-directory }}
@@ -1155,8 +1157,9 @@ jobs:
           echo "${{ vars.RPM_GPG_PUBLIC_KEY }}"     > .extra_files/DEB-GPG-KEY-comcast-xmidt
           echo "${{ secrets.RPM_GPG_PRIVATE_KEY }}" > .secrets/deb_gpg_private_key_file
 
-      # Simulated releases never use the real signing key (it isn't available
-      # to fork or dependabot PRs anyway); sign with a throwaway key instead.
+      # Simulated releases never touch the real signing key (the steps above
+      # are skipped, and the key isn't available to fork or dependabot PRs
+      # anyway); sign with a throwaway key instead.
       - name: Use a throwaway signing key for a simulated release
         if: |
           inputs.release-simulate-tag != '' &&
@@ -1164,16 +1167,21 @@ jobs:
           (inputs.release-rpms == true || inputs.release-debs == true)
         working-directory: ${{ inputs.working-directory }}
         shell: bash
+        env:
+          RPMS: ${{ inputs.release-rpms }}
+          DEBS: ${{ inputs.release-debs }}
         run: |
+          mkdir -p .extra_files .secrets
           export GNUPGHOME="$(mktemp -d)"
           gpg --batch --pinentry-mode loopback --passphrase simulated \
             --quick-gen-key "Simulated Release <simulated@invalid>" rsa2048 sign never
-          for kind in rpm deb; do
-            if [[ -f ".secrets/${kind}_gpg_private_key_file" ]]; then
-              gpg --batch --pinentry-mode loopback --passphrase simulated \
-                --armor --export-secret-keys > ".secrets/${kind}_gpg_private_key_file"
-              gpg --armor --export > ".extra_files/${kind^^}-GPG-KEY-comcast-xmidt"
-            fi
+          kinds=()
+          [[ "$RPMS" == "true" ]] && kinds+=(rpm)
+          [[ "$DEBS" == "true" ]] && kinds+=(deb)
+          for kind in "${kinds[@]}"; do
+            gpg --batch --pinentry-mode loopback --passphrase simulated \
+              --armor --export-secret-keys > ".secrets/${kind}_gpg_private_key_file"
+            gpg --armor --export > ".extra_files/${kind^^}-GPG-KEY-comcast-xmidt"
           done
           rm -rf "$GNUPGHOME"
 
