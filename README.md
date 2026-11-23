@@ -192,20 +192,23 @@ workflow can't be given more than its caller allows.
 | `style-skip` |  | boolean | `False` | Skip building the gofmt check. |
 | `tests-race` |  | boolean | `True` | If set to "true" (default), race condition checking will be performed during unit tests. Otherwise no race condition checking will be done. |
 | `tests-skip` |  | boolean | `False` | Skip running the unit tests. |
-| `tests-min-threshold` |  | number | `80` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. |
+| `tests-min-threshold` |  | number | `-1` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. When unset (-1), the total from `.testcoverage.yml` is used if present, otherwise 80. |
 | `yaml-lint-skip` |  | boolean | `True` | Skip linting yaml files. |
 
 #### Test coverage
 
 Coverage is checked with [go-test-coverage](https://github.com/vladopajic/go-test-coverage),
-which needs no token.  The unit tests fail when total coverage is below
-`tests-min-threshold` (default 80); set it to `0` to only report.  The
-coverage report is in the "Check test coverage" step's log.
+which needs no token.  The coverage report is in the "Check test coverage"
+step's log.
 
-Per-file and per-package minimums, and paths to exclude, can be set in a
-`.testcoverage.yml` file in the `working-directory`; it is passed to
-go-test-coverage when present.  The total minimum always comes from
-`tests-min-threshold`.  See the go-test-coverage documentation for the format.
+If the repo has a `.testcoverage.yml` (in the `working-directory`, or else at
+the repo root), it is used as-is: its total, per-file and per-package minimums
+and exclusions all apply.  Without one, the built-in default applies: the unit
+tests fail when total coverage is below 80%.
+
+Setting `tests-min-threshold` overrides the total minimum in either case; set
+it to `0` to only report.  See the go-test-coverage documentation for the file
+format.
 
 ### Auto Releaser (`auto-releaser.yml`)
 

@@ -264,10 +264,11 @@ on:
         description: |
           The minimum total test coverage percentage (0-100) required.  The
           unit tests fail if coverage is lower.  Set to 0 to report coverage
-          without enforcing a minimum.
+          without enforcing a minimum.  When left unset (-1), the total from
+          .testcoverage.yml is used if the repo has one, otherwise 80.
         required: false
         type: number
-        default: 80
+        default: -1
 
       # YML linting focused
       yaml-lint-skip:
@@ -365,17 +366,43 @@ jobs:
         run: |
           go test -v ${{ inputs.tests-race && '-race' || '' }} -coverprofile=coverage.txt ./...
 
+      # go-test-coverage only reads .testcoverage.yml when told to.  Use the
+      # repo's file if there is one (working directory first, then the repo
+      # root); otherwise fall back to the built-in 80% total minimum.  An
+      # explicit tests-min-threshold always wins.
+      - name: Find the coverage settings
+        id: coverage-settings
+        shell: bash
+        env:
+          WORKDIR:   ${{ inputs.working-directory }}
+          THRESHOLD: ${{ inputs.tests-min-threshold }}
+        run: |
+          config=""
+          for f in "${WORKDIR}/.testcoverage.yml" ".testcoverage.yml"; do
+            if [[ -f "$f" ]]; then config="$f"; break; fi
+          done
+
+          threshold="$THRESHOLD"
+          if [[ "$threshold" == -* ]]; then
+            if [[ -n "$config" ]]; then
+              threshold=-1   # not passed; the file's total applies
+            else
+              threshold=80
+            fi
+          fi
+
+          echo "Coverage config: ${config:-none}, total minimum: ${threshold}"
+          echo "config=${config}"       >> "$GITHUB_OUTPUT"
+          echo "threshold=${threshold}" >> "$GITHUB_OUTPUT"
+
       - name: Check test coverage
         id: coverage
         uses: vladopajic/go-test-coverage@6890500b00a7e5862e54662c04ea9fa7c799ce1e # v2.23.0
         with:
-          # go-test-coverage only reads .testcoverage.yml when told to.
-          config: >-
-            ${{ hashFiles(format('{0}/.testcoverage.yml', inputs.working-directory)) != ''
-            && format('{0}/.testcoverage.yml', inputs.working-directory) || '' }}
+          config:          ${{ steps.coverage-settings.outputs.config }}
           profile:         ${{ inputs.working-directory }}/coverage.txt
           source-dir:      ${{ inputs.working-directory }}
-          threshold-total: ${{ inputs.tests-min-threshold }}
+          threshold-total: ${{ steps.coverage-settings.outputs.threshold }}
 
 
   docker_check:
