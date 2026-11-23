@@ -202,8 +202,10 @@ which needs no token.  The unit tests fail when total coverage is below
 `tests-min-threshold` (default 80); set it to `0` to only report.  The
 coverage report is in the "Check test coverage" step's log.
 
-Per-file and per-package minimums can be set in a `.testcoverage.yml` file; see
-the go-test-coverage documentation.
+Per-file and per-package minimums, and paths to exclude, can be set in a
+`.testcoverage.yml` file in the `working-directory`; it is passed to
+go-test-coverage when present.  The total minimum always comes from
+`tests-min-threshold`.  See the go-test-coverage documentation for the format.
 
 ### Auto Releaser (`auto-releaser.yml`)
 
@@ -273,7 +275,12 @@ jobs:
     uses: rdkcentral/shared-go/.github/workflows/approve-dependabot.yml@<commit-sha> # vX.Y.Z
 ```
 
-The repo must have *Allow auto-merge* enabled.  No secrets are needed.
+No secrets are needed, but the repo (or its org) must enable two settings:
+
+- *Settings → General → Allow auto-merge*
+- *Settings → Actions → General → Allow GitHub Actions to create and approve
+  pull requests*; without it GitHub rejects the approval even with
+  `pull-requests: write`.
 
 ## Secrets and Variables
 

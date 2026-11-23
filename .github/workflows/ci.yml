@@ -369,6 +369,10 @@ jobs:
         id: coverage
         uses: vladopajic/go-test-coverage@6890500b00a7e5862e54662c04ea9fa7c799ce1e # v2.23.0
         with:
+          # go-test-coverage only reads .testcoverage.yml when told to.
+          config: >-
+            ${{ hashFiles(format('{0}/.testcoverage.yml', inputs.working-directory)) != ''
+            && format('{0}/.testcoverage.yml', inputs.working-directory) || '' }}
           profile:         ${{ inputs.working-directory }}/coverage.txt
           source-dir:      ${{ inputs.working-directory }}
           threshold-total: ${{ inputs.tests-min-threshold }}
