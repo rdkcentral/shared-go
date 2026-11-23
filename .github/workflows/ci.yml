@@ -316,7 +316,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      coverage_total:  ${{ steps.summary.outputs.total }}
+      coverage_total:  ${{ steps.coverage.outputs.total-coverage }}
     steps:
       - name: Checkout the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -354,77 +354,8 @@ jobs:
         run: |
           go test -v ${{ inputs.tests-race && '-race' || '' }} -coverprofile=coverage.txt ./...
 
-      # Summarize coverage in the job summary, an annotation and a job
-      # output (the total).  This never fails the job; the
-      # threshold is enforced by the next step so this runs either way.
-      - name: Summarize test coverage
-        id: summary
-        if: always() && hashFiles(format('{0}/coverage.txt', inputs.working-directory)) != ''
-        working-directory: ${{ inputs.working-directory }}
-        shell: bash
-        env:
-          THRESHOLD: ${{ inputs.tests-min-threshold }}
-          WORKDIR:   ${{ inputs.working-directory }}
-        run: |
-          # coverage.txt lines: <file>:<start>,<end> <statements> <count>
-          awk -v threshold="$THRESHOLD" '
-            NR == 1 && /^mode:/ { next }
-            {
-              n = split($1, parts, ":")
-              file = parts[1]
-              sub(/\/[^\/]*$/, "", file)
-              stmts[file] += $2
-              all += $2
-              if ($3 > 0) { hit[file] += $2; hits += $2 }
-            }
-            END {
-              total = (all > 0) ? 100 * hits / all : 0
-              ok = (total >= threshold)
-              printf "total=%.1f\nok=%s\n", total, ok ? "true" : "false" > "totals.env"
-              for (f in stmts) {
-                printf "%.1f\t%d\t%s\n", 100 * hit[f] / stmts[f], stmts[f], f > "packages.tsv"
-              }
-            }' coverage.txt
-          sort -n packages.tsv -o packages.tsv
-
-          total=$(sed -n 's/^total=//p' totals.env)
-          ok=$(sed -n 's/^ok=//p' totals.env)
-          if [ "$ok" = "true" ]; then icon="✅"; else icon="❌"; fi
-          if [ "$THRESHOLD" = "0" ]; then
-            minimum="no minimum"
-          else
-            minimum="minimum ${THRESHOLD}%"
-          fi
-
-          where=""
-          if [ "$WORKDIR" != "." ]; then where=" for \`${WORKDIR}\`"; fi
-
-          {
-            echo "### ${icon} Test coverage${where}: ${total}% (${minimum})"
-            echo
-            echo "<details><summary>Coverage by package (lowest first)</summary>"
-            echo
-            echo "| Package | Coverage | Statements |"
-            echo "| :--- | ---: | ---: |"
-            while IFS=$'\t' read -r pct stmts pkg; do
-              echo "| \`${pkg}\` | ${pct}% | ${stmts} |"
-            done < packages.tsv
-            echo
-            echo "</details>"
-          } > report.md
-
-          cat report.md >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$ok" = "true" ]; then
-            echo "::notice title=Test coverage::${total}% (${minimum})"
-          else
-            echo "::error title=Test coverage::${total}% is below the ${THRESHOLD}% minimum"
-          fi
-
-          echo "total=${total}" >> "$GITHUB_OUTPUT"
-          rm -f totals.env packages.tsv report.md
-
       - name: Check test coverage
+        id: coverage
         uses: vladopajic/go-test-coverage@6890500b00a7e5862e54662c04ea9fa7c799ce1e # v2.23.0
         with:
           profile:         ${{ inputs.working-directory }}/coverage.txt

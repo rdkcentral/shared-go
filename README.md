@@ -197,12 +197,9 @@ workflow can't be given more than its caller allows.
 #### Test coverage
 
 Coverage is checked with [go-test-coverage](https://github.com/vladopajic/go-test-coverage),
-which needs no token.  Results show up in these places:
-
-- **The check on the PR.**  The unit tests fail when total coverage is below
-  `tests-min-threshold` (default 80).  Set it to `0` to only report.
-- **The job summary and an annotation.**  Always produced: total coverage, the
-  pass/fail result, and a per-package table (lowest first).
+which needs no token.  The unit tests fail when total coverage is below
+`tests-min-threshold` (default 80); set it to `0` to only report.  The
+coverage report is in the "Check test coverage" step's log.
 
 Per-file and per-package minimums can be set in a `.testcoverage.yml` file; see
 the go-test-coverage documentation.
