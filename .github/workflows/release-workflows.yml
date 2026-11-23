@@ -25,6 +25,9 @@ jobs:
     # with a reference so we can test that the change works.
     uses: ./.github/workflows/ci.yml
     with:
+      # Real release on a version tag; otherwise rehearse it against a tag
+      # that only exists on the runner (nothing is tagged or published).
+      release-simulate-tag: ${{ !startsWith(github.ref, 'refs/tags/') && format('v0.0.{0}', github.run_number) || '' }}
       build-skip:           true
       lint-skip:            true
       license-skip:         true
