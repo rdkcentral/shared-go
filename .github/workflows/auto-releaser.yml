@@ -156,11 +156,28 @@ jobs:
         if: |
           steps.semver.outputs.next != '' &&
           steps.should-release.outputs.release == 'true' &&
-          inputs.which == 'tag' &&
-          inputs.release-workflow == ''
+          inputs.which == 'tag'
+        shell: bash
+        env:
+          WORKFLOW: ${{ inputs.release-workflow }}
         run: |
-          echo "::error::A tag created with GITHUB_TOKEN does not trigger the release.  Set the 'release-workflow' input to your CI workflow (it needs a workflow_dispatch trigger)."
-          exit 1
+          if [ -z "$WORKFLOW" ]; then
+            echo "::error::A tag created with GITHUB_TOKEN does not trigger the release.  Set the 'release-workflow' input to your CI workflow (it needs a workflow_dispatch trigger)."
+            exit 1
+          fi
+          file=".github/workflows/${WORKFLOW}"
+          if [ ! -f "$file" ]; then
+            echo "::error::release-workflow '${WORKFLOW}' was not found at ${file}."
+            exit 1
+          fi
+          # Handles all three forms of `on:` (string, list and map).
+          triggers='[(.on | select(tag == "!!map") | keys | .[]),
+                     (.on | select(tag == "!!seq") | .[]),
+                     (.on | select(tag == "!!str"))]'
+          if ! yq -e "${triggers} | any_c(. == \"workflow_dispatch\")" "$file" > /dev/null; then
+            echo "::error::release-workflow '${WORKFLOW}' has no workflow_dispatch trigger."
+            exit 1
+          fi
 
       - name: Create Tag
         if: |
@@ -178,6 +195,8 @@ jobs:
               sha: context.sha
             })
 
+      # If the dispatch fails, delete the tag so it doesn't become the current
+      # version with no release behind it; the next run then tries again.
       - name: Start the release run on the new tag
         if: |
           steps.semver.outputs.next != '' &&
@@ -189,7 +208,11 @@ jobs:
           WORKFLOW: ${{ inputs.release-workflow }}
           TAG:      ${{ steps.semver.outputs.next }}
         run: |
-          gh workflow run "$WORKFLOW" --ref "$TAG"
+          if ! gh workflow run "$WORKFLOW" --ref "$TAG"; then
+            echo "::error::Could not start ${WORKFLOW} on ${TAG}; removing the tag so the next run retries."
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/${TAG}"
+            exit 1
+          fi
 
       - name: Failure
         if: |
