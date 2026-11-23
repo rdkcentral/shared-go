@@ -257,19 +257,11 @@ on:
         required: false
         type: number
         default: 80
-      tests-post-comment:
-        description: |
-          If set to true (default), post (and keep updated) a coverage report
-          comment on the pull request.  Comments are never posted for pull
-          requests from forks or from dependabot, because their token is
-          read-only.
-        required: false
-        type: boolean
-        default: true
 
-      # Artifact uploading focused
+      # Deprecated: nothing is uploaded any more.  Kept so existing callers
+      # that pass it don't fail; it has no effect.
       upload-skip:
-        description: 'Skip uploading the artifacts.'
+        description: 'Deprecated and ignored.  No artifacts are uploaded.'
         required: false
         type: boolean
         default: false
@@ -333,7 +325,6 @@ jobs:
       contents: read
     outputs:
       coverage_total:  ${{ steps.summary.outputs.total }}
-      coverage_report: ${{ steps.summary.outputs.report }}
     steps:
       - name: Checkout the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -370,26 +361,9 @@ jobs:
         shell: bash
         run: |
           go test -v ${{ inputs.tests-race && '-race' || '' }} -coverprofile=coverage.txt ./...
-          go test ${{ inputs.tests-race && '-race' || '' }} -json  ./... > report.json
 
-      # upload report as artifact
-      - name: Archive unit tests report
-        if: inputs.upload-skip == false
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: report
-          path: ${{ inputs.working-directory }}/report.json
-
-      # upload coverage as artifact
-      - name: Archive code coverage results
-        if: inputs.upload-skip == false
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverage
-          path: ${{ inputs.working-directory }}/coverage.txt
-
-      # Summarize coverage in the job summary, an annotation and (for the
-      # optional PR comment) a job output.  This never fails the job; the
+      # Summarize coverage in the job summary, an annotation and a job
+      # output (the total).  This never fails the job; the
       # threshold is enforced by the next step so this runs either way.
       - name: Summarize test coverage
         id: summary
@@ -430,13 +404,10 @@ jobs:
             minimum="minimum ${THRESHOLD}%"
           fi
 
-          # The marker is per working directory so each module in a repo gets
-          # its own (updated, not duplicated) PR comment.
           where=""
           if [ "$WORKDIR" != "." ]; then where=" for \`${WORKDIR}\`"; fi
 
           {
-            echo "<!-- shared-go-coverage:${WORKDIR} -->"
             echo "### ${icon} Test coverage${where}: ${total}% (${minimum})"
             echo
             echo "<details><summary>Coverage by package (lowest first)</summary>"
@@ -458,13 +429,7 @@ jobs:
             echo "::error title=Test coverage::${total}% is below the ${THRESHOLD}% minimum"
           fi
 
-          {
-            echo "total=${total}"
-            delim="EOF_$(date +%s%N)"
-            echo "report<<${delim}"
-            cat report.md
-            echo "${delim}"
-          } >> "$GITHUB_OUTPUT"
+          echo "total=${total}" >> "$GITHUB_OUTPUT"
           rm -f totals.env packages.tsv report.md
 
       - name: Check test coverage
@@ -474,46 +439,6 @@ jobs:
           source-dir:      ${{ inputs.working-directory }}
           threshold-total: ${{ inputs.tests-min-threshold }}
 
-
-  # Optional: post the coverage report on the pull request.  Callers must
-  # grant `pull-requests: write` to this workflow (even when they don't enable
-  # tests-post-comment) because a reusable workflow can't request more
-  # permission than its caller allows.
-  coverage_comment:
-    name: Coverage PR comment
-    needs: unit_test
-    runs-on: [ ubuntu-latest ]
-    permissions:
-      pull-requests: write
-    if: |
-      always() &&
-      inputs.tests-post-comment &&
-      needs.unit_test.outputs.coverage_report != '' &&
-      github.event_name == 'pull_request' &&
-      github.actor != 'dependabot[bot]' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    steps:
-      - name: Post or update the coverage comment
-        continue-on-error: true
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          REPORT:  ${{ needs.unit_test.outputs.coverage_report }}
-          WORKDIR: ${{ inputs.working-directory }}
-        with:
-          script: |
-            const marker = `<!-- shared-go-coverage:${process.env.WORKDIR} -->`;
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const comments = await github.paginate(
-              github.rest.issues.listComments, { owner, repo, issue_number });
-            const existing = comments.find(c => c.body && c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment(
-                { owner, repo, comment_id: existing.id, body: process.env.REPORT });
-            } else {
-              await github.rest.issues.createComment(
-                { owner, repo, issue_number, body: process.env.REPORT });
-            }
 
   docker_check:
     if: inputs.release-docker
@@ -571,14 +496,6 @@ jobs:
             cat fmt.patch;
             exit 1;
           fi
-
-      - name: Archive code style results
-        if: inputs.upload-skip == false
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: fmt
-          path: ${{ inputs.working-directory }}/fmt.patch
-          retention-days: 10
 
 
   golint:
@@ -817,19 +734,7 @@ jobs:
 
       - name: Validate compliance
         run: |
-          licensed status -f yaml > licensing.yml || true
-          yq eval 'del(.apps[].sources[].dependencies[] | select(.allowed == "true") )' licensing.yml > disallowed.yml
           licensed status
-
-      - name: Archive license results
-        if: always() && inputs.upload-skip == false
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: licensing
-          path: |
-            ${{ inputs.working-directory }}/licensing.yml
-            ${{ inputs.working-directory }}/disallowed.yml
-          retention-days: 30
 
   release:
     permissions:

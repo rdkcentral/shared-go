@@ -137,7 +137,7 @@ on:
 permissions:
   contents:      write
   packages:      write
-  pull-requests: write   # used by the optional coverage PR comment
+  pull-requests: read
 
 jobs:
   ci:
@@ -192,8 +192,7 @@ workflow can't be given more than its caller allows.
 | `tests-race` |  | boolean | `True` | If set to "true" (default), race condition checking will be performed during unit tests. Otherwise no race condition checking will be done. |
 | `tests-skip` |  | boolean | `False` | Skip running the unit tests. |
 | `tests-min-threshold` |  | number | `80` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. |
-| `tests-post-comment` |  | boolean | `true` | If set to true (default), post (and keep updated) a coverage report comment on the pull request. Comments are never posted for pull requests from forks or from dependabot, because their token is read-only. |
-| `upload-skip` |  | boolean | `False` | Skip uploading the artifacts. |
+| `upload-skip` |  | boolean | `False` | Deprecated and ignored. No artifacts are uploaded. |
 | `yaml-lint-skip` |  | boolean | `True` | Skip linting yaml files. |
 
 #### Test coverage
@@ -205,15 +204,6 @@ which needs no token.  Results show up in these places:
   `tests-min-threshold` (default 80).  Set it to `0` to only report.
 - **The job summary and an annotation.**  Always produced: total coverage, the
   pass/fail result, and a per-package table (lowest first).
-- **A PR comment (on by default).**  Set `tests-post-comment: false` to
-  turn it off.  The caller must grant `pull-requests: write` (as in the
-  example above) whether or not the comment is enabled.  If a repo has several
-  modules, each `working-directory` gets its own comment; set the input to
-  `false` on jobs that repeat a directory so they don't compete.
-
-  One comment is posted and then updated on each push, passing or failing.
-  It is skipped for dependabot and fork PRs, and if posting fails the
-  job and the rest of the workflow still pass.
 
 Per-file and per-package minimums can be set in a `.testcoverage.yml` file; see
 the go-test-coverage documentation.
