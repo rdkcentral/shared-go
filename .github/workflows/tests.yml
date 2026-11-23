@@ -16,12 +16,12 @@ on:
       - 'library/**'
       - 'program/**'
       - 'README.md'
-    tags:
-      - 'v1.*'
 
   pull_request:
   workflow_dispatch:
 
+# The release job in ci.yml declares these, and a called workflow can't ask
+# for more than its caller grants.  Nothing is pushed or published.
 permissions:
   contents:      write
   pull-requests: read
@@ -33,8 +33,6 @@ jobs:
     # to run the workflow specified by the branch instead of what is associated
     # with a reference so we can test that the change works.
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/') == false
     with:
       license-skip:         true
       release-skip-publish: --skip-publish
@@ -45,17 +43,15 @@ jobs:
       release-docker-file:  ./cmd/foo/Dockerfile
     secrets: inherit
 
-  command-tag:
+  command-release:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/')
     with:
+      release-simulate-tag: v1.0.${{ github.run_number }}
       copyright-skip:       true
       build-skip:           true
       lint-skip:            true
       license-skip:         true
       style-skip:           true
-      #tests-skip:           true
       release-skip-publish: --skip-publish
       working-directory:    command
       release-main-package: ./cmd/foo
@@ -68,11 +64,8 @@ jobs:
       release-docker-minor:  true
     secrets: inherit
 
-
   program:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/') == false
     with:
       license-skip:          true
       release-skip-publish:  --skip-publish
@@ -83,17 +76,15 @@ jobs:
         main.go
     secrets: inherit
 
-  program-tag:
+  program-release:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/')
     with:
+      release-simulate-tag: v1.0.${{ github.run_number }}
       copyright-skip:         true
       build-skip:             true
       lint-skip:              true
       license-skip:           true
       style-skip:             true
-      #tests-skip:             true
       release-skip-publish:   --skip-publish
       release-binary-name:    programtest
       working-directory:      program
@@ -107,11 +98,8 @@ jobs:
         go.mod
     secrets: inherit
 
-
   library:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/') == false
     with:
       license-skip:         true
       release-skip-publish: --skip-publish
@@ -120,28 +108,23 @@ jobs:
       release-project-name: library
     secrets: inherit
 
-  library-tag:
+  library-release:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/')
     with:
+      release-simulate-tag: v1.0.${{ github.run_number }}
       copyright-skip:       true
       build-skip:           true
       lint-skip:            true
       license-skip:         true
       style-skip:           true
-      #tests-skip:           true
       release-skip-publish: --skip-publish
       working-directory:    library
       release-type:         library
       release-project-name: library
     secrets: inherit
 
-
   slow-things:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/') == false
     with:
       working-directory:    program
       release-type:         program
@@ -152,67 +135,9 @@ jobs:
 
   slow-things-library:
     uses: ./.github/workflows/ci.yml
-    if: |
-      startsWith(github.ref, 'refs/tags/') == false
     with:
       working-directory:    library
       release-type:         library
       release-project-name: library
       release-skip-publish: --skip-publish
     secrets: inherit
-
-  tag:
-    needs:
-      - command
-      - program
-      - library
-      - slow-things
-      - slow-things-library
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions:  write
-    # Pull requests from forks and from Dependabot get a read-only token
-    # (whatever the permissions block says), so they can't push a tag or
-    # dispatch a workflow.  The release path still runs after merge to main.
-    if: |
-      always() &&
-      github.actor != 'dependabot[bot]' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository) &&
-      startsWith(github.ref, 'refs/tags/') == false &&
-      needs.command.result                 != 'failure' &&
-      needs.program.result                 != 'failure' &&
-      needs.library.result                 != 'failure' &&
-      needs.slow-things.result             != 'failure' &&
-      needs.slow-things-library.result     != 'failure'
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Tags pushed with github.token don't trigger workflows, so dispatch
-      # this workflow on the new tag explicitly.
-      - name: Tag for testing the release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="v1.0.$(date +%s)"
-          git tag "$tag"
-          git push origin "$tag"
-          gh workflow run tests.yml --ref "$tag"
-
-  done:
-    needs: [ command-tag, program-tag, library-tag ]
-    runs-on: ubuntu-latest
-    if: |
-      always() &&
-      startsWith(github.ref, 'refs/tags/') == true &&
-      needs.command-tag.result             != 'failure' &&
-      needs.program-tag.result             != 'failure' &&
-      needs.library-tag.result             != 'failure'
-    steps:
-      - name: Test Complete
-        shell: bash
-        run: |
-          echo "Test Complete"

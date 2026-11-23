@@ -184,6 +184,7 @@ workflow can't be given more than its caller allows.
 | `release-rpms` |  | boolean | `True` | If set to true, release generic rpms as well. |
 | `release-skip` |  | boolean | `False` | Skip releasing the program. |
 | `release-skip-publish` |  | string |  | Set to --skip-publish to skip publishing. |
+| `release-simulate-tag` |  | string |  | Run the release as if this tag had been pushed, without creating it on GitHub. Nothing is published, packages are signed with a throwaway key, and the changelog is built from git. Used to test the release path on pull requests. |
 | `release-type` | ✅ | string |  | The type of artifact to expect and release. [ `library`, `program` ]. |
 | `release-with-extra-contents` |  | string |  | The list of any extra files to include in the packaged releases. See goreleaser nfpm contents for examples. |
 | `release-with-unique-user` |  | string | `true` | If set to true will add a user and group with the same name as the program. Otherwise root is assumed. |
@@ -232,8 +233,13 @@ jobs:
 Tags created with `github.token` don't trigger other workflows, so after
 tagging the auto-releaser dispatches `release-workflow` on the new tag.  The
 dispatched run executes your CI workflow as it exists at that tag, so its
-`with:` settings are not repeated.  If `release-workflow` is empty the job
-fails before creating a tag, rather than leaving an unreleased one.
+`with:` settings are not repeated.  If `release-workflow` is empty, missing or
+has no `workflow_dispatch` trigger, the job fails before creating a tag, rather
+than leaving an unreleased one.
+
+The tag is created as `github-actions[bot]`, so a tag ruleset that restricts
+creating version tags (as rdkcentral's "Maintenance Tag Rules" does) must let
+GitHub Actions bypass it, or the tag step fails.
 
 #### Inputs
 
@@ -282,8 +288,8 @@ Callers pass them with `secrets: inherit`.
 | `RPM_GPG_PRIVATE_KEY` | `ci.yml` (`release`) | if `release-rpms` or `release-debs` | Private key used to sign RPM/DEB packages. |
 | `RPM_GPG_PRIVATE_PASSWORD` | `ci.yml` (`release`) | if `release-rpms` or `release-debs` | Passphrase for the signing key. |
 
-Tagging, the dependabot approver, tag cleanup and `tests.yml` all use
-`github.token`.
+Tagging, the dependabot approver and `tests.yml` all use `github.token`.
+Simulated releases (`release-simulate-tag`) never use the signing secrets.
 
 ### Variables
 
@@ -323,13 +329,12 @@ The `library` directory represents a go library for release purposes.
 
 The `program` directory represents a go program for release purposes.
 
-Releases are tested automatically now.  The repo is tagged, but the release is
-not actually uploaded.  To verify the release is what you expect, comment out
-the `--skip-publish` options and trigger a PR.
-
-Test tags (`v1.0.x`) are created by `tests.yml` and removed weekly by
-`cleanup-tags.yml`.  Dependabot PRs skip the test tag because their token is
-read-only.
+Releases are tested on every PR, including PRs from forks and dependabot.  The
+`*-release` jobs in `tests.yml` set `release-simulate-tag`, so goreleaser runs
+against a tag that exists only on the runner: nothing is tagged on GitHub,
+nothing is published, and packages are signed with a throwaway key.  Building
+a changelog from the GitHub API and the tag-triggered start of a real release
+are not covered.
 
 Generally create a PR to test a change.
 

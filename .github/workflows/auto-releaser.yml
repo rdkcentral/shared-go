@@ -195,8 +195,8 @@ jobs:
               sha: context.sha
             })
 
-      # If the dispatch fails, delete the tag so it doesn't become the current
-      # version with no release behind it; the next run then tries again.
+      # Tags can't be deleted here (org ruleset), so if the dispatch fails the
+      # release has to be started by hand on the tag.
       - name: Start the release run on the new tag
         if: |
           steps.semver.outputs.next != '' &&
@@ -209,8 +209,8 @@ jobs:
           TAG:      ${{ steps.semver.outputs.next }}
         run: |
           if ! gh workflow run "$WORKFLOW" --ref "$TAG"; then
-            echo "::error::Could not start ${WORKFLOW} on ${TAG}; removing the tag so the next run retries."
-            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/${TAG}"
+            echo "::error::Created ${TAG} but could not start ${WORKFLOW} on it."
+            echo "::error::Start it by hand: gh workflow run ${WORKFLOW} --ref ${TAG}"
             exit 1
           fi
 
