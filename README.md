@@ -278,12 +278,13 @@ jobs:
     uses: rdkcentral/shared-go/.github/workflows/approve-dependabot.yml@<commit-sha> # vX.Y.Z
 ```
 
-No secrets are needed, but the repo (or its org) must enable two settings:
+No secrets are needed, but the repo must enable two settings:
 
 - *Settings → General → Allow auto-merge*
-- *Settings → Actions → General → Allow GitHub Actions to create and approve
-  pull requests*; without it GitHub rejects the approval even with
-  `pull-requests: write`.
+- *Settings → Actions → General → Workflow permissions → Allow GitHub Actions
+  to create and approve pull requests*.  Without it GitHub rejects the
+  approval even with `pull-requests: write`.  If the option is greyed out, the
+  organization's Actions policy must allow it first.
 
 ## Secrets and Variables
 
