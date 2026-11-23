@@ -749,7 +749,7 @@ jobs:
           fi
           gecho ""
           gecho "changelog:"
-          if [[ -n "${{ inputs.release-simulate-tag }}" ]]; then
+          if [[ "${{ inputs.release-simulate-tag != '' }}" == "true" ]]; then
             gecho "  use: git"
           else
             gecho "  use: github"
