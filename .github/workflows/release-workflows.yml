@@ -10,7 +10,8 @@ on:
       - '!v2.*'
       - '!v1.*'
 
-  pull_request:
+  # No pull_request trigger: tests.yml's library job already rehearses this
+  # exact release on every PR.
   workflow_dispatch:
 
 permissions:

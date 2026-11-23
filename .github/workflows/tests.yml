@@ -28,37 +28,22 @@ permissions:
   packages:      write
 
 jobs:
+  # One job per test directory, each running every check plus a simulated
+  # release (a tag that only exists on the runner; nothing is published).
   command:
     # Normally don't use a workflow without the @{ref}.  In this case, we want
     # to run the workflow specified by the branch instead of what is associated
     # with a reference so we can test that the change works.
     uses: ./.github/workflows/ci.yml
     with:
-      license-skip:         true
-      release-skip-publish: --skip-publish
-      working-directory:    command
-      release-main-package: ./cmd/foo
-      release-type:         program
-      release-docker:       true
-      release-docker-file:  ./cmd/foo/Dockerfile
-    secrets: inherit
-
-  command-release:
-    uses: ./.github/workflows/ci.yml
-    with:
-      release-simulate-tag: v1.0.${{ github.run_number }}
-      copyright-skip:       true
-      build-skip:           true
-      lint-skip:            true
-      license-skip:         true
-      style-skip:           true
-      release-skip-publish: --skip-publish
-      working-directory:    command
-      release-main-package: ./cmd/foo
-      release-binary-name:  foo
-      release-type:         program
-      release-docker:       true
-      release-docker-file:  ./cmd/foo/Dockerfile
+      working-directory:     command
+      release-simulate-tag:  v1.0.${{ github.run_number }}
+      release-skip-publish:  --skip-publish
+      release-type:          program
+      release-main-package:  ./cmd/foo
+      release-binary-name:   foo
+      release-docker:        true
+      release-docker-file:   ./cmd/foo/Dockerfile
       release-docker-latest: true
       release-docker-major:  true
       release-docker-minor:  true
@@ -67,77 +52,27 @@ jobs:
   program:
     uses: ./.github/workflows/ci.yml
     with:
-      license-skip:          true
-      release-skip-publish:  --skip-publish
       working-directory:     program
+      release-simulate-tag:  v1.0.${{ github.run_number }}
+      release-skip-publish:  --skip-publish
       release-type:          program
+      release-binary-name:   programtest
       release-docker:        true
+      release-docker-latest: true
+      release-docker-major:  true
+      release-docker-minor:  true
       release-docker-extras: |
         main.go
-    secrets: inherit
-
-  program-release:
-    uses: ./.github/workflows/ci.yml
-    with:
-      release-simulate-tag: v1.0.${{ github.run_number }}
-      copyright-skip:         true
-      build-skip:             true
-      lint-skip:              true
-      license-skip:           true
-      style-skip:             true
-      release-skip-publish:   --skip-publish
-      release-binary-name:    programtest
-      working-directory:      program
-      release-type:           program
-      release-docker:         true
-      release-docker-latest:  true
-      release-docker-major:   true
-      release-docker-minor:   true
-      release-docker-extras:  |
-        main.go
         go.mod
+      yaml-lint-skip:        false   # repo-wide, so only once
     secrets: inherit
 
   library:
     uses: ./.github/workflows/ci.yml
     with:
-      license-skip:         true
-      release-skip-publish: --skip-publish
       working-directory:    library
-      release-type:         library
-      release-project-name: library
-    secrets: inherit
-
-  library-release:
-    uses: ./.github/workflows/ci.yml
-    with:
       release-simulate-tag: v1.0.${{ github.run_number }}
-      copyright-skip:       true
-      build-skip:           true
-      lint-skip:            true
-      license-skip:         true
-      style-skip:           true
       release-skip-publish: --skip-publish
-      working-directory:    library
       release-type:         library
       release-project-name: library
-    secrets: inherit
-
-  slow-things:
-    uses: ./.github/workflows/ci.yml
-    with:
-      working-directory:    program
-      release-type:         program
-      release-project-name: program
-      release-skip-publish: --skip-publish
-      yaml-lint-skip:       false
-    secrets: inherit
-
-  slow-things-library:
-    uses: ./.github/workflows/ci.yml
-    with:
-      working-directory:    library
-      release-type:         library
-      release-project-name: library
-      release-skip-publish: --skip-publish
     secrets: inherit

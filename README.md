@@ -330,7 +330,7 @@ The `library` directory represents a go library for release purposes.
 The `program` directory represents a go program for release purposes.
 
 Releases are tested on every PR, including PRs from forks and dependabot.  The
-`*-release` jobs in `tests.yml` set `release-simulate-tag`, so goreleaser runs
+jobs in `tests.yml` (one per directory) set `release-simulate-tag`, so goreleaser runs
 against a tag that exists only on the runner: nothing is tagged on GitHub,
 nothing is published, and packages are signed with a throwaway key.  Building
 a changelog from the GitHub API and the tag-triggered start of a real release
