@@ -192,7 +192,6 @@ workflow can't be given more than its caller allows.
 | `tests-race` |  | boolean | `True` | If set to "true" (default), race condition checking will be performed during unit tests. Otherwise no race condition checking will be done. |
 | `tests-skip` |  | boolean | `False` | Skip running the unit tests. |
 | `tests-min-threshold` |  | number | `80` | The minimum total test coverage percentage (0-100) required. The unit tests fail if coverage is lower. Set to 0 to report coverage without enforcing a minimum. |
-| `upload-skip` |  | boolean | `False` | Deprecated and ignored. No artifacts are uploaded. |
 | `yaml-lint-skip` |  | boolean | `True` | Skip linting yaml files. |
 
 #### Test coverage

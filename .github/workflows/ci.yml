@@ -258,14 +258,6 @@ on:
         type: number
         default: 80
 
-      # Deprecated: nothing is uploaded any more.  Kept so existing callers
-      # that pass it don't fail; it has no effect.
-      upload-skip:
-        description: 'Deprecated and ignored.  No artifacts are uploaded.'
-        required: false
-        type: boolean
-        default: false
-
       # YML linting focused
       yaml-lint-skip:
         description: 'Skip linting yaml files.'
