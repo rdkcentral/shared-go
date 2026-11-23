@@ -182,11 +182,14 @@ jobs:
     permissions:
       contents: write
       actions:  write
-    # Dependabot's pull_request token is read-only, so it can't push a tag or
-    # dispatch a workflow.  Dependency bumps don't need the release path tested.
+    # Pull requests from forks and from Dependabot get a read-only token
+    # (whatever the permissions block says), so they can't push a tag or
+    # dispatch a workflow.  The release path still runs after merge to main.
     if: |
       always() &&
       github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
       startsWith(github.ref, 'refs/tags/') == false &&
       needs.command.result                 != 'failure' &&
       needs.program.result                 != 'failure' &&
